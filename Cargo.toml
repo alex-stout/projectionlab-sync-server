@@ -1,0 +1,32 @@
+[package]
+name = "projectionlab-sync-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "signal"] }
+# Pinned to the same major as chromiumoxide's own reqwest dependency so only one
+# HTTP stack gets compiled into the binary. 0.13's `default-tls` is rustls (via
+# rustls-platform-verifier) rather than native-tls, which is why neither build
+# stage in the Dockerfile needs OpenSSL. `query` is no longer implied by default
+# in 0.13, but fetch_balances() needs it for the ?version=2&balances-only=1 args.
+reqwest = { version = "0.13", features = ["json", "query"] }
+chromiumoxide = "0.9"
+futures = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+totp-rs = "5.7.2"
+# Matches the version chromiumoxide and hyper-util already pull in, so base64
+# isn't compiled twice.
+base64 = "0.22"
+chrono = "0.4.45"
+# Parses the [schedule] cron string. Picked over the `cron` crate because that
+# one *requires* a seconds field, so ordinary 5-field crontab lines like
+# "0 0 * * *" fail to parse; croner takes 5-field, optional seconds/year, and
+# @daily-style nicknames.
+croner = "3"

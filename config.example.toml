@@ -1,0 +1,26 @@
+[simplefin]
+# Full SimpleFIN Bridge access URL, including embedded basic-auth credentials.
+access_url = "https://user:pass@bridge.simplefin.org/simplefin"
+
+[projectionlab]
+email = "you@example.com"
+password = "change-me"
+# ProjectionLab Plugin API key from Settings > Plugins.
+api_key = "change-me"
+# Base32 TOTP secret shown when you enrolled your authenticator app for OTP.
+# Leave unset if you don't have OTP enabled.
+totp_secret = "change-me"
+# Persistent Chrome profile dir so we don't have to log in on every sync.
+profile_dir = "./.pl-profile"
+
+[schedule]
+# When to run the sync, as a cron expression in local time. Standard 5-field
+# crontab syntax (min hour day-of-month month day-of-week); a leading seconds
+# field, a trailing year field, and nicknames like "@daily" also work.
+# SimpleFIN's free tier caps you at 24 requests/day, so keep it to hourly or
+# less often, e.g. "0 * * * *" hourly, "0 6 * * *" daily at 06:00.
+cron = "38 21 * * *"
+
+[[mapping]]
+simplefin_account_id = "ACT-example-1"
+projectionlab_account_id = "pl-account-id-1"

@@ -1,0 +1,23 @@
+services:
+  projectionlab-sync:
+    build: .
+    restart: unless-stopped
+    # The sync binary runs as PID 1 and only wait()s on the Chromium process it
+    # spawned directly. Chromium's own renderer/zygote children get reparented to
+    # PID 1 when it exits, and nothing reaps them; `init` puts tini in front to do
+    # it, so zombies don't accumulate across daily cycles.
+    init: true
+    environment:
+      SIMPLEFIN_ACCESS_URL: ${SIMPLEFIN_ACCESS_URL}
+      PROJECTIONLAB_EMAIL: ${PROJECTIONLAB_EMAIL}
+      PROJECTIONLAB_PASSWORD: ${PROJECTIONLAB_PASSWORD}
+      PROJECTIONLAB_API_KEY: ${PROJECTIONLAB_API_KEY}
+      PROJECTIONLAB_TOTP_SECRET: ${PROJECTIONLAB_TOTP_SECRET}
+      SCHEDULE_CRON: "${SCHEDULE_CRON:-0 0 * * *}"
+      TZ: ${TZ:-UTC}
+      MAPPINGS: ${MAPPINGS}
+    volumes:
+      - pl-profile:/app/.pl-profile
+
+volumes:
+  pl-profile:
