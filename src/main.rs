@@ -29,18 +29,19 @@ async fn main() -> anyhow::Result<()> {
             eprintln!("usage: {} claim <base64-setup-token>", args[0]);
             std::process::exit(1);
         };
-        let access_url =
-            simplefin::claim_access_url(&reqwest::Client::new(), setup_token).await?;
+        let access_url = simplefin::claim_access_url(&reqwest::Client::new(), setup_token).await?;
         println!("{access_url}");
-        println!("(paste this into config.toml as [simplefin] access_url; it can only be claimed once)");
+        println!(
+            "(paste this into config.toml as [simplefin] access_url; it can only be claimed once)"
+        );
         return Ok(());
     }
 
     let config = if std::env::var("SIMPLEFIN_ACCESS_URL").is_ok() {
         Config::from_env()?
     } else {
-        let config_path = std::env::var("SYNC_CONFIG")
-            .unwrap_or_else(|_| "config.toml".to_string());
+        let config_path =
+            std::env::var("SYNC_CONFIG").unwrap_or_else(|_| "config.toml".to_string());
         Config::load(Path::new(&config_path))?
     };
 
@@ -67,7 +68,10 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         let sleep_duration = duration_until_next(&schedule)?;
-        tracing::info!(sleep_secs = sleep_duration.as_secs(), "sleeping until next scheduled run");
+        tracing::info!(
+            sleep_secs = sleep_duration.as_secs(),
+            "sleeping until next scheduled run"
+        );
 
         tokio::select! {
             _ = tokio::time::sleep(sleep_duration) => {}
@@ -103,65 +107,6 @@ fn duration_until_next_from<Tz: chrono::TimeZone>(
     Ok((next - now)
         .to_std()
         .unwrap_or(std::time::Duration::from_secs(0)))
-}
-
-#[cfg(test)]
-mod scheduler_tests {
-    use super::*;
-    use chrono::NaiveDate;
-    use std::str::FromStr;
-
-    fn at(hour: u32, min: u32, sec: u32) -> chrono::DateTime<chrono::Utc> {
-        NaiveDate::from_ymd_opt(2026, 1, 15)
-            .unwrap()
-            .and_hms_opt(hour, min, sec)
-            .unwrap()
-            .and_utc()
-    }
-
-    #[test]
-    fn schedules_later_today_when_time_hasnt_passed() {
-        let schedule = Cron::from_str("30 14 * * *").unwrap();
-
-        let result = duration_until_next_from(&schedule, at(10, 0, 0)).unwrap();
-        assert_eq!(result, std::time::Duration::from_secs(4 * 3600 + 1800));
-    }
-
-    #[test]
-    fn schedules_tomorrow_when_time_already_passed_today() {
-        let schedule = Cron::from_str("0 0 * * *").unwrap();
-
-        let result = duration_until_next_from(&schedule, at(23, 0, 0)).unwrap();
-        assert_eq!(result, std::time::Duration::from_secs(3600));
-    }
-
-    #[test]
-    fn schedules_tomorrow_when_time_exactly_now() {
-        let schedule = Cron::from_str("0 0 * * *").unwrap();
-
-        let result = duration_until_next_from(&schedule, at(0, 0, 0)).unwrap();
-        assert_eq!(result, std::time::Duration::from_secs(24 * 3600));
-    }
-
-    #[test]
-    fn supports_sub_daily_schedules() {
-        let schedule = Cron::from_str("0 */6 * * *").unwrap();
-
-        let result = duration_until_next_from(&schedule, at(10, 0, 0)).unwrap();
-        assert_eq!(result, std::time::Duration::from_secs(2 * 3600));
-    }
-
-    #[test]
-    fn supports_day_of_week_schedules() {
-        // 2026-01-15 is a Thursday; the next Monday 09:00 is 3 days + 23h out.
-        let schedule = Cron::from_str("0 9 * * MON").unwrap();
-
-        let result = duration_until_next_from(&schedule, at(10, 0, 0)).unwrap();
-        assert_eq!(
-            result,
-            std::time::Duration::from_secs(3 * 24 * 3600 + 23 * 3600)
-        );
-    }
 }
 
 async fn shutdown_signal() {
@@ -277,7 +222,10 @@ async fn list_accounts(config: &Config) -> anyhow::Result<()> {
                     .or_else(|| account.get("title"))
                     .and_then(|v| v.as_str())
                     .unwrap_or("?");
-                let balance = account.get("balance").map(|v| v.to_string()).unwrap_or_default();
+                let balance = account
+                    .get("balance")
+                    .map(|v| v.to_string())
+                    .unwrap_or_default();
                 println!("    id={id:<25} balance={balance:<12} name={name}");
             }
         }
@@ -291,8 +239,7 @@ async fn run_sync_cycle(
     pl_client: &ProjectionLabClient,
     config: &Config,
 ) -> anyhow::Result<()> {
-    let balances =
-        simplefin::fetch_balances(http_client, &config.simplefin.access_url).await?;
+    let balances = simplefin::fetch_balances(http_client, &config.simplefin.access_url).await?;
 
     let mut updated = 0;
     let mut skipped = 0;
@@ -335,4 +282,63 @@ async fn run_sync_cycle(
     tracing::info!(updated, skipped, errored, "sync cycle complete");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod scheduler_tests {
+    use super::*;
+    use chrono::NaiveDate;
+    use std::str::FromStr;
+
+    fn at(hour: u32, min: u32, sec: u32) -> chrono::DateTime<chrono::Utc> {
+        NaiveDate::from_ymd_opt(2026, 1, 15)
+            .unwrap()
+            .and_hms_opt(hour, min, sec)
+            .unwrap()
+            .and_utc()
+    }
+
+    #[test]
+    fn schedules_later_today_when_time_hasnt_passed() {
+        let schedule = Cron::from_str("30 14 * * *").unwrap();
+
+        let result = duration_until_next_from(&schedule, at(10, 0, 0)).unwrap();
+        assert_eq!(result, std::time::Duration::from_secs(4 * 3600 + 1800));
+    }
+
+    #[test]
+    fn schedules_tomorrow_when_time_already_passed_today() {
+        let schedule = Cron::from_str("0 0 * * *").unwrap();
+
+        let result = duration_until_next_from(&schedule, at(23, 0, 0)).unwrap();
+        assert_eq!(result, std::time::Duration::from_secs(3600));
+    }
+
+    #[test]
+    fn schedules_tomorrow_when_time_exactly_now() {
+        let schedule = Cron::from_str("0 0 * * *").unwrap();
+
+        let result = duration_until_next_from(&schedule, at(0, 0, 0)).unwrap();
+        assert_eq!(result, std::time::Duration::from_secs(24 * 3600));
+    }
+
+    #[test]
+    fn supports_sub_daily_schedules() {
+        let schedule = Cron::from_str("0 */6 * * *").unwrap();
+
+        let result = duration_until_next_from(&schedule, at(10, 0, 0)).unwrap();
+        assert_eq!(result, std::time::Duration::from_secs(2 * 3600));
+    }
+
+    #[test]
+    fn supports_day_of_week_schedules() {
+        // 2026-01-15 is a Thursday; the next Monday 09:00 is 3 days + 23h out.
+        let schedule = Cron::from_str("0 9 * * MON").unwrap();
+
+        let result = duration_until_next_from(&schedule, at(10, 0, 0)).unwrap();
+        assert_eq!(
+            result,
+            std::time::Duration::from_secs(3 * 24 * 3600 + 23 * 3600)
+        );
+    }
 }

@@ -15,18 +15,18 @@ chromiumoxide = "0.9"
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
+toml = "1"
 anyhow = "1"
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-totp-rs = "5.7.2"
-# Matches the version chromiumoxide and hyper-util already pull in, so base64
-# isn't compiled twice.
-base64 = "0.22"
+totp-rs = "6"
+# chromiumoxide and hyper-util still pull in base64 0.22, so this compiles a
+# second copy; drop back to 0.22 if build time/binary size matters more.
+base64 = "0.23"
 chrono = "0.4.45"
 # Parses the [schedule] cron string. Picked over the `cron` crate because that
 # one *requires* a seconds field, so ordinary 5-field crontab lines like
 # "0 0 * * *" fail to parse; croner takes 5-field, optional seconds/year, and
 # @daily-style nicknames.
-croner = "3"
+croner = "4"

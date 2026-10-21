@@ -4,7 +4,7 @@ use std::time::Duration;
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::page::Page;
 use futures::StreamExt;
-use totp_rs::{Algorithm, Secret, TOTP};
+use totp_rs::{Algorithm, Builder, Secret};
 
 use crate::error::SyncError;
 
@@ -67,7 +67,9 @@ impl ProjectionLabClient {
             api_key: api_key.to_string(),
         };
 
-        client.ensure_logged_in(email, password, totp_secret).await?;
+        client
+            .ensure_logged_in(email, password, totp_secret)
+            .await?;
 
         Ok(client)
     }
@@ -275,14 +277,17 @@ impl ProjectionLabClient {
             return Ok(());
         };
 
-        let secret = Secret::Encoded(totp_secret.to_string())
-            .to_bytes()
-            .map_err(|e| SyncError::Browser(format!("decoding totp secret: {e:?}")))?;
-        let totp = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret)
+        let secret = Secret::try_from_base32(totp_secret)
+            .map_err(|e| SyncError::Browser(format!("decoding totp secret: {e}")))?;
+        let totp = Builder::new()
+            .with_algorithm(Algorithm::SHA1)
+            .with_digits(6)
+            .with_skew(1)
+            .with_step_duration(30)
+            .with_secret(secret)
+            .build()
             .map_err(|e| SyncError::Browser(format!("building totp generator: {e}")))?;
-        let code = totp
-            .generate_current()
-            .map_err(|e| SyncError::Browser(format!("generating totp code: {e}")))?;
+        let code = totp.generate_current().to_string();
 
         otp_field
             .click()
@@ -398,7 +403,9 @@ impl ProjectionLabClient {
 /// exportData() shape isn't publicly documented, so rather than hardcode one path
 /// (e.g. `currentFinances.accounts`) we scan the whole tree and surface whatever
 /// matches, alongside the raw JSON for anything this misses.
-pub fn find_account_like_arrays(value: &serde_json::Value) -> Vec<(String, Vec<serde_json::Value>)> {
+pub fn find_account_like_arrays(
+    value: &serde_json::Value,
+) -> Vec<(String, Vec<serde_json::Value>)> {
     let mut found = Vec::new();
     walk_for_accounts(value, "$", &mut found);
     found

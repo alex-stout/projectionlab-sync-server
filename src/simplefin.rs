@@ -134,9 +134,12 @@ mod tests {
     #[ignore]
     async fn fetches_balances_from_live_demo_bridge() {
         let client = Client::new();
-        let balances = fetch_balances(&client, "https://demo:demo@beta-bridge.simplefin.org/simplefin")
-            .await
-            .expect("demo bridge should respond");
+        let balances = fetch_balances(
+            &client,
+            "https://demo:demo@beta-bridge.simplefin.org/simplefin",
+        )
+        .await
+        .expect("demo bridge should respond");
 
         assert!(!balances.is_empty());
         assert!(balances.values().any(|a| a.name.contains("Checking")));
